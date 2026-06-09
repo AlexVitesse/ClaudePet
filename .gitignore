@@ -1,0 +1,27 @@
+# Arduino / build artifacts
+build/
+*.bin
+*.elf
+*.hex
+*.map
+
+# Arduino IDE
+*.tmp
+
+# Editores
+.vscode/
+.idea/
+.pio/
+
+# Config local de Claude Code
+.claude/
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Secretos: nunca commitear tokens reales
+secrets.h
+*.token
+.credentials.json
