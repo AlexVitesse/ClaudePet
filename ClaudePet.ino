@@ -19,6 +19,9 @@ static int g_remaining = -1;        // % restante de la ventana de 5h
 static int g_overrideRemaining = -1; // para pruebas por serial (-1 = off)
 static uint32_t g_frame = 0;
 
+static long     g_reset5h = -1;        // segundos hasta el reset (snapshot del último poll)
+static uint32_t g_resetAnchorMs = 0;   // millis() en el instante de ese snapshot
+
 static const uint32_t ANIM_INTERVAL_MS = 100;  // ~10 FPS
 static uint32_t g_lastAnim = 0;
 static uint32_t g_lastPoll = 0;
@@ -48,15 +51,20 @@ void doPoll() {
   }
 
   g_remaining = 100 - u.used5h;
+  if (u.reset5h >= 0) {
+    g_reset5h = u.reset5h;
+    g_resetAnchorMs = millis();
+  }
   g_state = pet::stateFromRemaining(g_remaining, g_state);
-  Serial.printf("[poll] used5h=%d%% used7d=%d%% -> restante=%d%% estado=%s\n",
-                u.used5h, u.used7d, g_remaining, pet::name(g_state));
+  Serial.printf("[poll] used5h=%d%% used7d=%d%% -> restante=%d%% reset=%lds estado=%s\n",
+                u.used5h, u.used7d, g_remaining, u.reset5h, pet::name(g_state));
 }
 
 // Comandos de prueba por serial:
-//   r<NN>  fija % restante simulado (p.ej. "r5")  | "r-" desactiva override
-//   p      fuerza un sondeo ahora
-//   x      factory reset
+//   r<NN>     fija % restante simulado (p.ej. "r5")  | "r-" desactiva override
+//   p         fuerza un sondeo ahora
+//   t<TOKEN>  reemplaza el token OAuth y lo guarda (sin tocar el WiFi)
+//   x         factory reset
 void handleSerial() {
   if (!Serial.available()) return;
   String line = Serial.readStringUntil('\n');
@@ -76,17 +84,44 @@ void handleSerial() {
     Serial.println("[test] sondeo forzado");
     doPoll();
     g_lastPoll = millis();
+  } else if (c == 't') {
+    String tok = line.substring(1);
+    tok.trim();
+    if (tok.length() > 20) {
+      g_settings.oauthToken = tok;
+      secrets::save(g_settings);
+      Serial.println("[test] token actualizado y guardado; sondeando...");
+      g_state = PetState::Neutral;
+      doPoll();
+      g_lastPoll = millis();
+    } else {
+      Serial.println("[test] token demasiado corto, ignorado");
+    }
   } else if (c == 'x') {
     Serial.println("[test] factory reset...");
     provisioning::factoryResetAndReboot();
   }
 }
 
+// Rellena `out` con la cuenta atrás al reset de la ventana de 5h.
+// Devuelve false si no hay dato (oculta el texto).
+static bool formatResetCountdown(char* out, size_t n, uint32_t now) {
+  if (g_reset5h < 0) return false;
+  long elapsed = (long)((now - g_resetAnchorMs) / 1000UL);
+  long left = g_reset5h - elapsed;
+  if (left < 0) left = 0;                       // ya debería haberse reseteado
+  long h = left / 3600;
+  long m = (left % 3600) / 60;
+  if (h > 0)      snprintf(out, n, "%ldh%02ldm", h, m);
+  else if (m > 0) snprintf(out, n, "%ldm", m);
+  else            snprintf(out, n, "<1m");
+  return true;
+}
+
 void setup() {
   Serial.begin(115200);
-  delay(200);
+  delay(500);
   Serial.println("\nClaudePet booting...");
-
   display::begin();
   display::splash("ClaudePet", "iniciando...");
 
@@ -101,6 +136,7 @@ void setup() {
 #endif
 
   if (!provisioning::ensure(g_settings)) {
+    Serial.println("Provisioning fallo o requiere portal, reiniciando...");
     display::splash("Reiniciando", "config...");
     delay(1500);
     ESP.restart();
@@ -141,6 +177,8 @@ void loop() {
       rem = g_overrideRemaining;
       s = pet::stateFromRemaining(rem, s);
     }
-    display::render(s, rem, g_frame);
+    char resetBuf[12];
+    bool hasReset = formatResetCountdown(resetBuf, sizeof(resetBuf), now);
+    display::render(s, rem, g_frame, hasReset ? resetBuf : nullptr);
   }
 }

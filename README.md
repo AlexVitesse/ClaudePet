@@ -1,148 +1,145 @@
 # ClaudePet 🐾
 
-Mascota física de escritorio que muestra cuánta **cuota de Claude (Pro/Max)** te
-queda en tu ventana de **5 horas**, con expresiones de ánimo (feliz → pánico) en
-una pantalla OLED de 0.96".
+> Una mascota física de escritorio que te enseña cuánta **cuota de Claude (Pro/Max)**
+> te queda en la ventana de **5 horas**, y cuándo se reinicia.
 
-El ESP32 es **autónomo**: habla directo con la API de Anthropic por HTTPS, lee
-las cabeceras de rate-limit de tu suscripción y mapea la cuota restante a la cara
-de la mascota. No necesita PC ni middleware.
+![ESP32](https://img.shields.io/badge/ESP32-C3%20%7C%20WROOM-E7352C?logo=espressif&logoColor=white)
+![Arduino](https://img.shields.io/badge/Arduino%20IDE-00878F?logo=arduino&logoColor=white)
+![OLED](https://img.shields.io/badge/OLED-SSD1306%20128x64-222)
+
+Un ESP32 con una pantalla OLED de 0.96" que pone cara feliz cuando vas sobrado y
+entra en pánico cuando estás a punto de agotar la cuota. Es **autónomo**: habla
+directo con la API de Anthropic por HTTPS y lee las cabeceras de rate-limit de tu
+suscripción. No necesita PC, ni scraping, ni middleware.
 
 ```
-[ESP32-C3 + OLED SSD1306] --HTTPS cada ~120s--> api.anthropic.com/v1/messages
-      |  lee: anthropic-ratelimit-unified-5h-utilization
-      v
-  máquina de estados -> cara de la mascota + barra de %
+[ESP32 + OLED] ──HTTPS cada ~120 s──▶ api.anthropic.com/v1/messages  (max_tokens: 1)
+      │  lee: anthropic-ratelimit-unified-5h-utilization
+      │       anthropic-ratelimit-unified-5h-reset  (+ cabecera Date)
+      ▼
+  máquina de estados ──▶ cara de la mascota + barra de % + cuenta atrás al reset
 ```
 
-## Estados de ánimo
+## Qué muestra
 
-| % restante (5h) | Estado        | Cara |
-|----------------:|---------------|------|
-| 80–100%         | Feliz         | ojitos `^_^`, parpadeo lento |
-| 40–79%          | Neutral       | mira de lado a lado |
-| 11–39%          | Ansioso       | ojos abiertos, sudando, parpadeo rápido |
-| 0–10%           | Pánico        | ojos en `X`, pantalla parpadeando |
-| —               | Sin WiFi / Token? | mensajes de error |
+| % restante (5 h) | Estado   | Cara |
+|-----------------:|----------|------|
+| 80–100 %         | Feliz    | ojitos `^_^`, parpadeo lento |
+| 40–79 %          | Neutral  | mira de lado a lado |
+| 11–39 %          | Ansioso  | ojos abiertos, sudando, parpadeo rápido |
+| 0–10 %           | Pánico   | ojos en `X`, pantalla parpadeando |
+| —                | `SIN WIFI` / `TOKEN?` | mensajes de error |
 
-## Documentación
+Abajo aparece una barra con el % restante y la **cuenta atrás hasta el reinicio**
+de la ventana (p. ej. `3h12m`). La cuenta atrás se calcula restando la hora del
+servidor (cabecera `Date`) al epoch de reset, así que no hace falta NTP.
 
-Detalle completo en [`docs/`](docs/README.md):
-[Arquitectura](docs/ARCHITECTURE.md) · [Hardware](docs/HARDWARE.md) · [Puesta en marcha](docs/SETUP.md) · [Desarrollo](docs/DEVELOPMENT.md)
+## Hardware
 
-## Hardware (BOM)
-
-- **ESP32-C3 SuperMini** (o ESP32-WROOM; ver `platformio.ini`).
-- **OLED 0.96" SSD1306 128×64 I2C** (4 pines: VCC, GND, SCL, SDA).
+- **ESP32** — DevKit/WROOM clásico o **ESP32-C3 SuperMini**.
+- **OLED 0.96" SSD1306 128×64 I2C** (VCC, GND, SCL, SDA).
 - Cable USB para alimentar.
 
-### Cableado (ESP32-C3 SuperMini)
+| OLED | ESP32 clásico | ESP32-C3 SuperMini |
+|------|---------------|--------------------|
+| VCC  | 3V3           | 3V3                |
+| GND  | GND           | GND                |
+| SDA  | GPIO21        | GPIO8              |
+| SCL  | GPIO22        | GPIO9              |
 
-| OLED | ESP32-C3 |
-|------|----------|
-| VCC  | 3V3      |
-| GND  | GND      |
-| SDA  | GPIO8    |
-| SCL  | GPIO9    |
+Por defecto `config.h` viene para **ESP32 clásico** (21/22). Para el C3 cambia
+`OLED_SDA_PIN` / `OLED_SCL_PIN`. Más detalle en [docs/HARDWARE.md](docs/HARDWARE.md).
 
-Ajusta los pines en `src/config.h` (`OLED_SDA_PIN` / `OLED_SCL_PIN`) si tu placa
-es distinta.
+## Instalación rápida (Arduino IDE)
 
-## Compilar y flashear (Arduino IDE)
-
-### 1. Soporte para placas ESP32
-- `Archivo > Preferencias > Gestor de URLs adicionales de tarjetas`, añade:
-  `https://espressif.github.io/arduino-esp32/package_esp32_index.json`
-- `Herramientas > Placa > Gestor de tarjetas`, busca **esp32** (Espressif) e instala.
-
-### 2. Librerías (Gestor de librerías)
-- **U8g2** (de oliver / olikraus)
-- **WiFiManager** (de tzapu)
-
-### 3. Abrir y subir
-- Abre `ClaudePet.ino` (debe estar en una carpeta llamada `ClaudePet`).
-- `Herramientas > Placa`: selecciona tu ESP32-C3 (p. ej. **ESP32C3 Dev Module**
-  o **LOLIN C3 Mini**).
-- En placas C3, activa **USB CDC On Boot: Enabled** para ver el Serial por USB.
-- Selecciona el **Puerto** y pulsa **Subir** (→).
-- Abre el **Monitor Serie** a **115200 baudios** para ver los logs.
-
-> Todos los `.cpp/.h` deben estar en la **misma carpeta** que `ClaudePet.ino`
-> (el Arduino IDE los compila juntos automáticamente).
+1. **Placas ESP32:** en `Archivo > Preferencias`, añade
+   `https://espressif.github.io/arduino-esp32/package_esp32_index.json` y luego
+   instala **esp32** (Espressif) desde el Gestor de tarjetas.
+2. **Librerías:** instala **U8g2** (olikraus) y **WiFiManager** (tzapu).
+3. **Clona** el repo; la carpeta debe llamarse `ClaudePet` (requisito del IDE):
+   ```bash
+   git clone https://github.com/AlexVitesse/ClaudePet.git
+   ```
+4. Abre `ClaudePet.ino`, elige tu placa y puerto, y pulsa **Subir**.
+   En placas C3 activa **USB CDC On Boot: Enabled** para ver el Serial.
+5. Abre el **Monitor Serie** a **115200** baudios.
 
 ## Configuración (portal cautivo)
 
-En el **primer arranque** (o tras un factory reset) el ESP32 crea una red WiFi
-`ClaudePet-setup`:
+En el primer arranque el ESP32 crea la red WiFi **`ClaudePet-setup`**:
 
-1. Conéctate a esa red desde el móvil/PC.
-2. Abre `http://192.168.4.1`.
-3. Elige tu WiFi, pega tu **Token OAuth** (ver abajo) y, si quieres, ajusta el
-   modelo y el intervalo de sondeo (default 120 s).
-4. Guarda. El ESP32 se reinicia y empieza a mostrar la cuota.
+1. Conéctate a ella y abre `http://192.168.4.1`.
+2. Elige tu WiFi y pega tu **token OAuth** (ver abajo). Opcional: modelo e
+   intervalo de sondeo (default 120 s).
+3. Guarda. El dispositivo se reinicia y empieza a mostrar la cuota.
 
-### Cómo obtener tu Token OAuth de Claude
+### Obtener el token OAuth
 
-El token lo emite tu sesión de **Claude Code** (plan Pro/Max). En Windows:
+Necesitas [Claude Code](https://docs.anthropic.com/en/docs/claude-code) con tu
+cuenta Pro/Max. Genera un token de larga duración:
 
-- Mira `%USERPROFILE%\.claude\.credentials.json` y copia el valor de
-  `accessToken` (empieza por `sk-ant-oat...`).
-- Si no está ahí, puede estar en el **Administrador de credenciales** de Windows
-  (entrada de Claude Code) según tu instalación.
+```bash
+claude setup-token
+```
 
-> ⚠️ Trata ese token como una contraseña. Da acceso a tu cuenta de Claude.
-> Si caduca, la mascota mostrará el estado `TOKEN?`; vuelve a generarlo y
-> reconfigura por el portal.
+Copia el token que imprime (`sk-ant-oat...`) y pégalo en el portal.
 
-## Pruebas por puerto serie
+> [!WARNING]
+> **No uses** el `accessToken` de `~/.claude/.credentials.json`: Claude Code lo
+> rota constantemente y deja de funcionar en minutos.
 
-Desde el Monitor Serie puedes escribir:
+> [!CAUTION]
+> El token da acceso a tu cuenta de Claude: trátalo como una contraseña y nunca lo
+> subas a git. Se guarda solo en la memoria NVS del ESP32.
 
-Con el **Monitor Serie** abierto (115200, fin de línea "Nueva línea"):
+## Comandos por Monitor Serie
 
-| Comando | Efecto |
-|---------|--------|
-| `r5`    | Simula 5% restante (entra en Pánico) |
-| `r60`   | Simula 60% (Neutral) |
-| `r-`    | Desactiva la simulación |
-| `p`     | Fuerza un sondeo a la API ahora |
-| `x`     | Factory reset (borra WiFi y token) |
+Fin de línea: **"Nueva línea"**.
 
-En cada sondeo verás en el log:
-`[poll] used5h=NN% used7d=NN% -> restante=NN% estado=...`
+| Comando    | Efecto |
+|------------|--------|
+| `r5`       | Simula 5 % restante (Pánico) |
+| `r60`      | Simula 60 % (Neutral) |
+| `r-`       | Desactiva la simulación |
+| `p`        | Fuerza un sondeo real ahora |
+| `t<TOKEN>` | Reemplaza el token sin pasar por el portal |
+| `x`        | Factory reset (borra WiFi y token) |
 
-## Consumo
+En cada sondeo verás:
+`[poll] used5h=NN% used7d=NN% -> restante=NN% reset=NNNNs estado=...`
 
-- El sondeo por defecto cada **120 s** ⇒ ~30 requests/h, con `max_tokens:1`
-  (coste despreciable de tu ventana). Súbelo en el portal si quieres menos red.
-- Entre sondeos solo corre la animación (~10 FPS), sin tocar WiFi.
+## Consumo de cuota
 
-## Notas de seguridad
+Un sondeo cada 120 s ≈ 30 requests/hora con `max_tokens: 1` sobre Haiku: coste
+despreciable. Entre sondeos solo corre la animación (~10 FPS) sin tocar el WiFi.
 
-- **v1 (este código):** TLS con `setInsecure()` (no valida el certificado de
-  Anthropic) para ahorrar RAM, y token guardado en NVS en claro. Suficiente para
-  uso doméstico en tu red.
-- **Endurecimiento (v2):** pinear el certificado raíz de Anthropic
-  (`client.setCACert(...)`) y cifrar el token con AES-256-GCM derivado de un PIN.
+## Seguridad
+
+- TLS con `setInsecure()` (no valida el certificado) y token en NVS sin cifrar.
+  Suficiente para uso doméstico.
+- Pendiente (v2): pinear el certificado raíz de Anthropic y cifrar el token.
 
 ## Estructura
 
-Carpeta de sketch de Arduino (todos los archivos juntos):
-
 ```
 ClaudePet/
-  ClaudePet.ino         orquestación (setup/loop)
-  config.h              pines, defaults, nombres de cabeceras
-  secrets_store.*       persistencia NVS (token/modelo/intervalo)
-  provisioning.*        portal cautivo WiFiManager
-  anthropic_client.*    sonda HTTPS + parseo de cabeceras 5h/7d
-  pet.*                 máquina de estados de ánimo (con histéresis)
-  display.*             render del OLED (caras procedurales + barra)
+├── ClaudePet.ino         orquestación (setup/loop, comandos serie, cuenta atrás)
+├── config.h              pines, defaults, umbrales, cabeceras
+├── secrets_store.*       persistencia NVS (token / modelo / intervalo)
+├── provisioning.*        portal cautivo WiFiManager
+├── anthropic_client.*    sonda HTTPS + parseo de cabeceras 5h/7d/reset
+├── pet.*                 máquina de estados de ánimo (con histéresis)
+├── display.*             render del OLED (caras procedurales, barra, reloj)
+└── docs/                 arquitectura, hardware, setup y desarrollo
 ```
 
-## Proyectos de referencia / inspiración
+Documentación completa: [Arquitectura](docs/ARCHITECTURE.md) ·
+[Hardware](docs/HARDWARE.md) · [Puesta en marcha](docs/SETUP.md) ·
+[Desarrollo](docs/DEVELOPMENT.md)
+
+## Inspiración
 
 - [oauramos/claude-usage-stick](https://github.com/oauramos/claude-usage-stick) — mismo enfoque autónomo.
 - [dorofino/ClaudeGauge](https://github.com/dorofino/ClaudeGauge)
-- [anthropics/claude-desktop-buddy](https://github.com/anthropics/claude-desktop-buddy) — mascota oficial (ideas de animaciones).
-- [rootedlab-code/claude-code-usage-monitor](https://github.com/rootedlab-code/claude-code-usage-monitor) — variante middleware (JSONL).
+- [anthropics/claude-desktop-buddy](https://github.com/anthropics/claude-desktop-buddy) — ideas de animaciones.
+- [rootedlab-code/claude-code-usage-monitor](https://github.com/rootedlab-code/claude-code-usage-monitor) — variante con middleware.

@@ -21,7 +21,7 @@ Orquesta todo. En `loop()`:
 - Sondea la API cada `pollSeconds` (`doPoll()`).
 - Reintenta WiFi sin bloquear si se cae.
 - Anima la cara a ~10 FPS (`display::render`).
-- `handleSerial()` procesa comandos de prueba (`r`, `p`, `x`).
+- `handleSerial()` procesa comandos de prueba (`r`, `p`, `t`, `x`).
 
 ### `anthropic_client.*`
 `anthropic::probe(token, model)` → `UsageResult { ok, badToken, used5h, used7d,
@@ -34,7 +34,8 @@ cabeceras con `collectHeaders()` y las lee tras el POST.
 
 ### `display.*`
 Caras **procedurales** con primitivas de U8g2 (no sprites). `drawFace(state,
-frame)` decide la forma de los ojos/boca; `render()` añade la barra de % abajo.
+frame)` decide la forma de los ojos/boca; `render()` añade la barra de % abajo y, si hay dato, la cuenta atrás al reset
+con un mini-reloj.
 `frame` es un contador que incrementa cada tick (parpadeo, miradas, gota).
 
 ### `secrets_store.*` + `provisioning.*`

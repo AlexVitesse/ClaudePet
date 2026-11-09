@@ -31,11 +31,14 @@ En el **primer arranque** (o tras factory reset) el ESP32 crea la red WiFi
 4. Guarda. El ESP32 se reinicia y empieza a mostrar la cuota.
 
 ## 5. Obtener el Token OAuth de Claude
-El token lo emite tu sesión de **Claude Code** (plan Pro/Max). En Windows:
-- Mira `%USERPROFILE%\.claude\.credentials.json` y copia el valor de
-  `accessToken` (empieza por `sk-ant-oat...`).
-- Si no está ahí, revisa el **Administrador de credenciales** de Windows (entrada
-  de Claude Code), según tu instalación.
+Con [Claude Code](https://docs.anthropic.com/en/docs/claude-code) y tu cuenta
+Pro/Max, genera un token de larga duración:
+```
+claude setup-token
+```
+Copia el token (`sk-ant-oat...`) y pégalo en el portal. **No uses** el
+`accessToken` de `~/.claude/.credentials.json`: Claude Code lo rota y caduca en
+minutos.
 
 > ⚠️ Trata el token como una contraseña: da acceso a tu cuenta de Claude. Nunca
 > lo subas a git (el `.gitignore` ya bloquea `.credentials.json` y `*.token`).
@@ -51,11 +54,12 @@ Con el Monitor Serie abierto (115200, fin de línea "Nueva línea"):
 | `r60`   | Simula 60% (Neutral) |
 | `r-`    | Desactiva la simulación |
 | `p`     | Fuerza un sondeo real ahora |
+| `t<TOKEN>` | Reemplaza el token sin pasar por el portal |
 | `x`     | Factory reset (borra WiFi y token) |
 
 En cada sondeo verás:
 ```
-[poll] used5h=NN% used7d=NN% -> restante=NN% estado=...
+[poll] used5h=NN% used7d=NN% -> restante=NN% reset=NNNNs estado=...
 ```
 
 ## Troubleshooting
@@ -63,6 +67,6 @@ En cada sondeo verás:
 |---------|----------------|----------|
 | OLED en blanco | Cableado/pines I2C | Revisa SDA/SCL y `config.h` |
 | No aparece `ClaudePet-setup` | Ya estaba provisionado | Manda `x` por serial o usa el botón |
-| Estado `TOKEN?` | Token caducado/incorrecto | Regenera el token y reconfigura |
+| Estado `TOKEN?` | Token caducado/incorrecto | `claude setup-token` y mándalo con `t<TOKEN>` |
 | Estado `SIN WIFI` | WiFi fuera de alcance | Acerca el dispositivo / reconfigura WiFi |
 | No se ve el Serial (C3) | USB CDC desactivado | Activa *USB CDC On Boot: Enabled* |

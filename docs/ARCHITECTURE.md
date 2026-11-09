@@ -31,7 +31,7 @@ las cabeceras de la respuesta:
 |----------|-------------|
 | `anthropic-ratelimit-unified-5h-utilization` | % usado de la ventana de 5 h |
 | `anthropic-ratelimit-unified-7d-utilization` | % usado de la ventana de 7 días |
-| `anthropic-ratelimit-unified-5h-reset` | segundos hasta el reset (si viene) |
+| `anthropic-ratelimit-unified-5h-reset` | epoch Unix del reset; se resta la cabecera `Date` para la cuenta atrás |
 
 La autenticación es con un **token OAuth** de la suscripción (cabecera
 `Authorization: Bearer ...` + `anthropic-beta: oauth-2025-04-20`). **No** se usa

@@ -5,13 +5,13 @@
 
 // ---------------------------------------------------------------------------
 // Pines del OLED SSD1306 128x64 I2C
-// ESP32-C3 SuperMini: SDA=GPIO8, SCL=GPIO9 (ajusta a tu cableado).
+// ESP32 clásico (DevKit): SDA=21, SCL=22  |  ESP32-C3 SuperMini: SDA=8, SCL=9.
 // ---------------------------------------------------------------------------
-#define OLED_SDA_PIN 8
-#define OLED_SCL_PIN 9
+#define OLED_SDA_PIN 21
+#define OLED_SCL_PIN 22
 
 // Botón opcional (long-press = borrar config / abrir portal). -1 = sin botón.
-#define BUTTON_PIN 9  // reusa BOOT en muchas placas; pon -1 si no lo usas
+#define BUTTON_PIN -1  // GPIO libre con pull-up (ojo: en ESP32 clásico GPIO9 es de la flash)
 // Nota: si BUTTON_PIN coincide con un pin I2C, déjalo en -1 para evitar choques.
 #undef BUTTON_PIN
 #define BUTTON_PIN -1
@@ -23,6 +23,9 @@
 #define ANTHROPIC_PATH     "/v1/messages"
 #define ANTHROPIC_VERSION  "2023-06-01"
 #define ANTHROPIC_OAUTH_BETA "oauth-2025-04-20"
+// Sin un User-Agent tipo Claude Code, las peticiones OAuth caen en un bucket
+// muy limitado (429 persistentes). Ajustable si cambia el formato esperado.
+#define HTTP_USER_AGENT    "claude-cli/1.0.0 (external, cli)"
 // Modelo barato para la sonda; max_tokens:1 hace la request casi gratis.
 #define DEFAULT_MODEL      "claude-haiku-4-5-20251001"
 

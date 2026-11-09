@@ -14,5 +14,6 @@ void splash(const char* line1, const char* line2 = nullptr);
 //   state    : estado de ánimo
 //   remaining: % restante (0..100), -1 si desconocido (oculta barra)
 //   frame    : contador de animación (incrementa cada tick para parpadeo/movim.)
-void render(PetState state, int remaining, uint32_t frame);
+//   resetText: cadena corta a mostrar junto a la barra (p.ej. "3h12m" o "14:32"). Pasa nullptr o "" para ocultarla.
+void render(PetState state, int remaining, uint32_t frame, const char* resetText = nullptr);
 }  // namespace display

@@ -30,8 +30,8 @@
 
 ## Cambiar de placa o de pines
 - **Otros pines I2C:** edita `OLED_SDA_PIN` / `OLED_SCL_PIN` en `config.h`.
-- **ESP32-WROOM clásico:** los pines I2C por defecto suelen ser `SDA=21`,
-  `SCL=22`. Ajusta `config.h` y selecciona la placa adecuada en el IDE.
+- **ESP32 clásico (DevKit/WROOM):** `SDA=21`, `SCL=22`. Es lo que trae
+  `config.h` por defecto; para el C3 cámbialo a 8/9.
 - **Botón opcional:** pon `BUTTON_PIN` a un GPIO libre con pull-up; al arrancar
   con el botón pulsado se hace factory reset. Por defecto está desactivado (-1)
   para no chocar con el I2C.
